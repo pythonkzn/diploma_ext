@@ -3,6 +3,7 @@ import itertools
 import json
 import codecs
 import time
+from pprint import pprint
 
 
 class User:
@@ -12,35 +13,32 @@ class User:
     def get_params(self):
         return dict(user_id=self.id, access_token=TOKEN, v=5.92)
 
-    def get_all_data(self):
+    def get_all_data(self,d,f):
         params = {'access_token': TOKEN, 'v': 5.92,
-                  'code': 'return [API.groups.get({user_id:'+str(self.id)+'})];'}
-        response = requests.get(
-            'https://api.vk.com/method/execute',
-            params
-        )
-        time.sleep(0.33)
-        return response.json()['response']
+                  'code': ''
+                          'var groups = API.groups.get({user_id:'+str(self.id)+'}).items;' # группы User
+                          'var counts = API.groups.get({user_id:'+str(self.id)+'}).count;' # количество групп User
+                           'var usr_friends = API.friends.get({user_id:'+str(self.id)+'}).items;'
+                           'var i=5*' +str(d)+';'
+                           'var friends_group_list=[];'
+                          'while (i <(5+5*'+str(d)+'+' +str(f)+')){'
+                            'var friend = usr_friends[i];'
+                            'var fr_groups = API.groups.get({user_id: friend}).items;'
+                             'friends_group_list = friends_group_list + [fr_groups];'
+                             'i = i+1;'
+                                                                               '};'
+                            'return {"groups":groups, "fr_group":friends_group_list, "usr_friends":usr_friends};'
+                        }
+        try:
+            response = requests.get(
+                'https://api.vk.com/method/execute',
+                params
+            )
+            time.sleep(0.33)
+            return response.json()
+        except Exception as e:
+            print(e)
 
-    def common_group_list_n_fr(self, n):
-        friends_group_list = []
-        output_list = []
-        groups_list = self.get_all_data()[0]['items'] # список групп User
-        i = 0
-        for group in groups_list:
-            i += 1
-            params = {'access_token': TOKEN, 'v': 5.92,
-                      'code': 'return [API.groups.getMembers({group_id:' + str(group) + ', filter: "friends"})];'}
-            try:  # обходим случаи по которым запрос не отвечает ожидаемым форматом
-                response_get_friends = requests.get('https://api.vk.com/method/execute', params) # получаем список друзей которые в группе
-                friends_group_list = response_get_friends.json()['response'][0]['items']
-                if len(friends_group_list) <= n:
-                    output_list.append(group)
-                print('-','Осталось обработать {} групп'.format(i) ,' из {}'.format(self.get_all_data()[0]['count']))
-                time.sleep(0.33)
-            except Exception as e:
-                print(e)  # выводим полученные ошибки от API VK
-        return output_list
 
 class Group:
     def __init__(self, id):
@@ -98,13 +96,42 @@ def list_to_json(list, path_f):
         json.dump(list, json_file, ensure_ascii=False)
 
 def main():
+    output_dict = {}
+    out_groups = []
     N = input('Введите N, оно будет равняться максимальному количеству друзей которые состоят в группах, которые выдаст Программа  ')
     user_input = input('Введите id или имя пользователя: ')
     user = get_user(user_input)
-    common_groups = user.common_group_list_n_fr(int(N)) # получили список групп в которых есть общие друзьч не более N человек
-    output_list_com = get_output_data(common_groups)
-    list_to_json(output_list_com, 'groups_com.json')
-    print('ID групп, в которых есть общие друзья, но не более чем {} человек  '.format(N), common_groups)
+    d = 0
+    y = 0
+
+    output_dict = user.get_all_data(d,y)
+    groups_list = output_dict['response']['groups']
+    fr_group_list = []
+    usr_friends_list = output_dict['response']['usr_friends']
+    d = len(usr_friends_list)//5 # понимаем сколько раз запрашивать список членов групп
+    f = len(usr_friends_list)%5
+    i = 0
+    while i < d:
+        if (i + 1) == d:
+            y = f
+        print('- - -')
+        output_dict = user.get_all_data(i,y)
+        i += 1
+        z = 0
+        while z <= (len(output_dict['response']['fr_group'])-1):
+            fr_group_list.append(output_dict['response']['fr_group'][z])
+            z += 1
+
+
+    pprint(usr_friends_list[185])
+    #print(groups_list)
+    pprint(fr_group_list[185])
+
+
+
+
+#    list_to_json(output_list_json, 'groups_com.json')
+#    print('ID групп, в которых есть общие друзья, но не более чем {} человек  '.format(N), output_list)
 
 if __name__ == "__main__":
     with open('token.json', 'r') as file:
