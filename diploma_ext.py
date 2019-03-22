@@ -2,75 +2,16 @@ import requests
 import itertools
 import json
 import codecs
-import time
 from pprint import pprint
-import sys
-
-
-class User:
-    def __init__(self, id):
-        self.id = id
-
-    def get_all_data(self, d, f):
-        params = {'access_token': TOKEN, 'v': 5.92,
-                  'code': ''
-                          'var groups =API.groups.get({user_id:' + str(self.id) + '}).items;'  # группы User
-                          'var counts = API.groups.get({user_id:' + str(self.id) + '}).count;'  # количество групп User
-                          'var usr_friends = API.friends.get({user_id:' + str(self.id) + '}).items;'
-                          'var usr_friends_check_count = API.friends.get({user_id:' + str(self.id) + '}).count;'
-                          'if (usr_friends_check_count > 5000){'
-                          'usr_friends = usr_friends'
-                          ' + API.friends.get({user_id:' + str(self.id) + ', offset: 5000}).items;}'
-                          'var i=5*' + str(d) + ';'  # за один раз - 5 запросов 
-                          'var friends_group_list=[];'
-                          'while (i <(5+5*' + str(d) + '+' + str(f) + '))'
-                                         '{''var friend = usr_friends[i];'
-                                         'var fr_groups = API.groups.get({user_id: friend}).items;'  # группы  друзей
-                                         'friends_group_list = friends_group_list + [fr_groups];'
-                                         'i = i+1;'
-                                         '};'
-                          'return {"groups":groups, "fr_group":friends_group_list, "usr_friends":usr_friends};'
-                  }
-        try:
-            response = requests.get(
-                'https://api.vk.com/method/execute',
-                params
-            )
-            time.sleep(0.33)
-            return response.json()
-        except Exception as e:
-            print(response.json())
-
-
-class Group:
-    def __init__(self, id):
-        self.id = id
-
-    def get_params(self):
-        return {
-            'group_id': self.id,
-            'fields': 'members_count',
-            'access_token': TOKEN,
-            'v': 5.92
-        }
-
-    def get_group_data(self):
-        params = self.get_params()
-        response_get_group = requests.get(
-            'https://api.vk.com/method/groups.getById',
-            params
-        )
-        group_data_dict = response_get_group.json()['response'][0]
-        output_dict = {'name': group_data_dict['name'],
-                       'gid': group_data_dict['id'],
-                       'members_count': group_data_dict['members_count']}
-        return output_dict
+from modules.user import User
+from modules.group import Group
 
 
 def get_user(usr_in):
     try:
         int(usr_in)
         user = User(usr_in)
+        return user
     except ValueError:
         params = {
             'user_ids': usr_in,
@@ -86,6 +27,7 @@ def get_user(usr_in):
             return user
         except Exception as e:
             print(response_get_id.json()['error']['error_msg'])
+
 
 
 def get_output_data(unc_gr):
