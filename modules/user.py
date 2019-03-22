@@ -37,5 +37,25 @@ class User:
             )
             time.sleep(0.33)
             return response.json()
-        except Exception as e:
-            print(response.json())
+        except requests.exceptions.ConnectionError:
+            print('Ошибка соединения. Ждем 5 сек после чего попытаеся восстановить связь!')
+            time.sleep(5)
+            try:
+                response = requests.get(
+                    'https://api.vk.com/method/execute',
+                    params
+                )
+                time.sleep(0.33)
+                return response.json()
+            except requests.exceptions.ConnectionError:
+                print('Ошибка соединения. Ждем 10 сек после чего попытаеся восстановить связь!')
+                time.sleep(10)
+                try:
+                    response = requests.get(
+                        'https://api.vk.com/method/execute',
+                        params
+                    )
+                    time.sleep(0.33)
+                    return response.json()
+                except requests.exceptions.ConnectionError:
+                    print('Ошибка соединения. Завершение работы Программы.')
